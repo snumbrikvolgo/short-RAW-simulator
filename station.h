@@ -55,35 +55,7 @@ public:
 
     void determTxAttempt(bool success, double current_time);
 
-    void edcaSlotBound(int tx_num, int freeze, double current_time) {
-        if ( queue.empty() || ( freeze < AC.AIFSN )) {
-            return;
-        }
-        assert(backoff >= 0);
-
-        // this station do not transmit
-        if ( backoff > 0 ) {
-            --backoff;
-            return;
-        }
-
-        // this station makes a transmission attempt
-        assert(tx_num > 0);
-        if ( tx_num > 1 ) { // collision
-            ++retry_counter;
-            if ( AC.RL == retry_counter ) {
-                dropPacket(current_time, Packet::Status::DROPPED_RETRY);
-                CW = AC.CW_min;
-            } else {
-                CW = std::min(2 * CW, AC.CW_max);
-            }
-        } else { // success
-            dropPacket(current_time, Packet::Status::DELIVERED);
-            CW = AC.CW_min;
-        }
-        genBackoff();
-        return;
-    }
+    void edcaSlotBound(int tx_num, int freeze, double current_time);
 
     std::vector<Packet> processed_packets;
     Counter counter;

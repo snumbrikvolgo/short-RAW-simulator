@@ -41,12 +41,12 @@ RunSimulation(int N, double Traw, double Tper,
 
 
 int main() {
-    int N = 50;
-    int K = 10;
+    int N = 2;
+    int K = 6; 
     double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-    double Tper = 100000.0;
-    double lambda = 5e-6;
-    int pers_num = 1000, exps_num = 1000;
+    double Tper = 13360.0;
+    double lambda = 1.5e-5;
+    int pers_num = 1000, exps_num = 100;
     AccessCategory AC(16, 1024, 7, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
 
     auto answer = RunSimulation(N, Traw, Tper, pers_num, lambda, AC, exps_num, 5489U);
@@ -57,7 +57,7 @@ int main() {
     auto pi_local_distr = answer.second.first.getDistribution();
     auto pi_end_distr = answer.second.second.getDistribution();
     for ( size_t n = 0; n + 1 != pi_local_distr.size(); ++n ) {
-        std::cout << n << "\t" << pi_local_distr[n] << "\t" << pi_end_distr[n] << "\n";
+        std::cout << n << "\t" << pi_local_distr[n] << "\t\t" << pi_end_distr[n] << "\n";
     }
 
     return 0;
@@ -87,11 +87,11 @@ int RunRawSlot(std::vector<STA> *const stas_ptr, double Tslot, double slot_start
     int freeze = init_freeze;
     int e = 0, s = 0, c = 0;
 
-    while ( e * Te + s * Ts + c * Tc <= Tslot - Ts ) {
+    while ( e * Te + s * Ts + c * Tc <= Tslot - Ts ) { //проходим по виртуальным слотам
         int tx_num = 0;
         for ( auto const & sta : *stas_ptr ) {
-            if ( sta.ifTx(freeze) ) {
-                ++tx_num;
+            if ( sta.ifTx(freeze) ) { //именно ВЫПАДАЯ на этот слот = его начало
+                ++tx_num; //сколько передают в этот вирт слот?
             }
         }
 
@@ -105,29 +105,31 @@ int RunRawSlot(std::vector<STA> *const stas_ptr, double Tslot, double slot_start
         }
 
         for ( auto & sta : *stas_ptr ) {
-            sta.edcaSlotBound(tx_num, freeze, current_time);
+            sta.edcaSlotBound(tx_num, freeze, current_time); // после этой функции, если была коллизия /успех, слот можно считать завершенным
         }
 
         if ( 0 == tx_num ) {
             ++e;
-            ++freeze;
+            //++freeze;
         } else if ( 1 == tx_num ) {
             ++s;
-            freeze = 0;
+            return s;
+            //freeze = 0;
         } else {
             ++c;
-            freeze = 0;
+            return c;
+            //freeze = 0;
         }
 
         bool smbd_has_packet = false;
         for ( auto const & sta : *stas_ptr ) {
             smbd_has_packet = smbd_has_packet || sta.ifHasPacket();
             if ( smbd_has_packet ) {
-                break;
+                break;              //у кого-то есть пакет
             }
         }
         if ( !smbd_has_packet ) {
-            break;
+            break;                  //если ни у кого его нет , то выходим из функции (для экономии, видимо, времени)
         }
     }
     return s;
@@ -161,44 +163,44 @@ RunSimulation(int N, double Traw, double Tper,
     std::vector<STA> STAs;
     STAs.reserve(N);
     for (int i = 0; i != N; ++i) {
-        STAs.emplace_back(AC, &mt_gen_eng);
+        STAs.emplace_back(AC, &mt_gen_eng); //создаем N станций со своими счетчиками отсрочки сначала
     }
 
     int init_freeze = 0;
 
     SimAnswer answer;
-    Counter pi_local(N);
-    Counter pi_end(N);
+    Counter pi_local(N);        //счетчик активных на конец периода
+    Counter pi_end(N);          //счетчик активных на конец эксперимента
     int N_active;
 
-    for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) {
+    for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) { //пошли эксперименты
         std::vector<double> poisson_times;
-        poisson_times.reserve(N);
+        poisson_times.reserve(N);       //перед началом эксперимента как такового
         for (int i = 0; i != N; ++i) {
             double poisson_time = -Traw - log(uni_01_dist(mt_gen_eng)) / lambda;
-            poisson_times.push_back(poisson_time);
+            poisson_times.push_back(poisson_time);      //генерируем вектор рождения пакета во времени по Пуассону
         }
 
         for (int per_ind = 0; per_ind < pers_num; ++per_ind) {
-            double current_time = per_ind * Tper + Tper - Traw;
+            double current_time = per_ind * Tper + Tper - Traw; //на момент начала слота
             for (int i = 0; i != N; ++i) {
-                if ((!STAs[i].ifHasPacket()) && (poisson_times[i] < current_time)) {
+                if ((!STAs[i].ifHasPacket()) && (poisson_times[i] < current_time)) { //если пакета нет и пуассоновское время меньше текущего --> возник пакет в промежутке
                     STAs[i].pushPacket(poisson_times[i]);
-                    poisson_times[i] = std::numeric_limits<double>::quiet_NaN();
+                    poisson_times[i] = std::numeric_limits<double>::quiet_NaN(); //"удаляем" из очереди присвоения времени
                 }
             }
             RunRawSlot(&STAs, Traw, current_time, init_freeze);
             for (int i = 0; i != N; ++i) {
-                if ((!STAs[i].ifHasPacket()) && (std::isnan(poisson_times[i]))) {
-                    poisson_times[i] = STAs[i].lastDropTime() - log(uni_01_dist(mt_gen_eng)) / lambda;
+                if ((!STAs[i].ifHasPacket()) && (std::isnan(poisson_times[i]))) { //нет пакета, но он был, то
+                    poisson_times[i] = STAs[i].lastDropTime() - log(uni_01_dist(mt_gen_eng)) / lambda;  //время прихода нового пакета тоже сл.в.
                 }
             }
 
-            N_active = CountActiveStas(&STAs);
+            N_active = CountActiveStas(&STAs); // активные на конец периода
             pi_local.increment(N_active);
         }
 
-        N_active = CountActiveStas(&STAs);
+        N_active = CountActiveStas(&STAs); //активные на конец эксперимента
         pi_end.increment(N_active);
 
         for (auto &sta : STAs) {
