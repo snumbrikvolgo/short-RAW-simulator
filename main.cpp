@@ -18,18 +18,20 @@
 
 struct SimAnswer {
     SimAnswer()
-            : deliv(0), drop(0),
-              total_delay(0.0),
+            : deliv(0), drop(0),stay(0),
+              total_delay(0.0), mean_active(0),
               counter(COUNTERS_LIMIT) { }
 
     int64_t deliv;
+    int64_t  mean_active;
     int64_t drop;
+    int64_t stay;
     double total_delay;
     Counter counter;
 };
 
 
-void PrintAnswer(int N, int exps_num,
+void PrintAnswer(int N, int K, double lambda, int per_num, int exps_num,
                  SimAnswer const & answer,
                  bool print_distr);
 std::tuple<int, int, int> RunRawSlot(std::vector<STA> * const stas_ptr,
@@ -52,17 +54,20 @@ int DropFrame(std::vector<STA> *const stas_ptr, double Tslot, double slot_start_
 
 
 int main() {
-    int N = 8;
-    int K = 7; //максимум 20 их
+
+    int N = 50;
+    int max = 50;
+    int K = 15;
+
     double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-    double Tper = 13360.0;
-    double lambda = 4.69169115218968e-05;
-    int pers_num =  500, exps_num = 10000;
+    double Tper = Traw * 10;
+    double lambda = 7.5e-07;//= -log(1 - q) / 18440 ;
+    int pers_num =  100, exps_num = 1000;
     AccessCategory AC(16, 1024, 7, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
 
     auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
 
-    PrintAnswer(N, exps_num, answer.first, true);
+    PrintAnswer(N, K, lambda,pers_num, exps_num, answer.first, true);
 
     std::cout << "n\tpi_local\tpi_end\n";
     auto pi_local_distr = answer.second.first.getDistribution();
@@ -72,16 +77,86 @@ int main() {
     }
 
     return 0;
+
+
+
+//    double q = 0.1;
+//    std::vector <double> ls = {5.42570680e-08, 7.54840528e-08, 1.05015668e-07, 1.46100932e-07,
+//                               2.03259978e-07, 2.82781350e-07, 3.93413856e-07, 5.47329101e-07,
+//                               7.61460585e-07, 1.05936670e-06, 1.47382258e-06, 2.05042597e-06,
+//                               2.85261382e-06, 3.96864151e-06, 5.52129254e-06, 7.68138702e-06,
+//                               1.06865749e-05, 1.48674821e-05, 2.06840849e-05, 2.87763165e-05};
+
+//    for (int i = 0; i < 0; i++) {
+//        int K = 6; //максимум 20 их
+//        for (int j = 0; j < 1; j++)
+//        {                                                                                             ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+//            //std::cout << i << " " << j << "\n";
+//            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+//            double Tper = Traw * 10;
+//            double lambda = ls[i];//= -log(1 - q) / 18440 ;
+//
+//            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+//            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, true);
+//
+//            //K++;
+//        }
+//       // q += 0.1;
+//    }
+
+
+
+//    std::ofstream active_log;
+//    active_log.open("D:\\IITP\\Results\\truth_comparison.txt",  std::ios::out | std::ios::app);
+//
+//    for (int i = 0; i < max; i++)
+//    {
+//        std::cout << "cycle" << i << " " << N << "\n";
+//        auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+//        //PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
+//
+//        active_log << N << "," << K << "," << lambda << "," << answer.first.mean_active/exps_num << ",";      ПРОВЕРКА СТАЦИОНАРНОГО РАСПРЕДЕЛЕНИЯ
+//        auto pi_end_distr = answer.second.second.getDistribution();
+//        for ( size_t n = 0; n < pi_end_distr.size(); n++ ) {
+//            active_log << pi_end_distr[n] << ",";
+//
+//        }
+//
+//        for ( size_t n = pi_end_distr.size(); n <= max; n++ )
+//        {
+//            active_log << 0 << ",";
+//
+//        }
+//
+//        active_log << 0 << "\n";
+//
+//        N++;
+//    }
+//
+//    active_log.close();
+//    return 0;
 }
 
 
-void PrintAnswer(int N, int exps_num,
+void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
                  SimAnswer const & answer,
                  bool print_distr=true) {
-    std::cout
-            << answer.deliv / static_cast<float>(exps_num * N) << "\t"
-            << answer.drop / static_cast<float>(exps_num * N) << "\t"
-            << answer.total_delay / static_cast<float>(answer.deliv) << "\n";
+
+    //std::ofstream active_log;
+    //active_log.open("D:\\IITP\\Results\\truth_comparison.txt",  std::ios::out | std::ios::app);
+//    active_log
+//            << answer.deliv / static_cast<float>(exps_num * N) << ","
+//            << answer.deliv / static_cast<float>(exps_num * per) << ","
+//            << answer.stay / static_cast<float>(exps_num * N) << ","
+//            << answer.stay / static_cast<float>(exps_num * per) << ","
+//            << lambda << ","
+//            << K << ","
+//            << answer.drop / static_cast<float>(exps_num * N) << ","
+//            << answer.drop / static_cast<float>(exps_num * per) << ","
+//            << answer.total_delay / static_cast<float>(answer.deliv) << "\n";
+
+
+//    active_log.close();
 
     if ( print_distr ) {
         for ( auto const & c : answer.counter.getDistribution() ) {
@@ -144,8 +219,6 @@ std::tuple<int, int, int> RunRawSlot(std::vector<STA> *const stas_ptr, double Ts
     }
     return std::make_tuple(s,e,c);
 }
-
-
 /**
  * N - число станций, получающих один пакет по событиям Пуассоновского потока
  * Traw - длительность RAW
@@ -177,13 +250,12 @@ RunSimulation(int N, double Traw, double Tper,
     }
 
     int init_freeze = 0;
-
+    std::ofstream active_log;
+    active_log.open("D:\\IITP\\Results\\active_log_2.txt",  std::ios::out | std::ios::app );
     SimAnswer answer;
     Counter pi_local(N);        //счетчик активных на конец периода
     Counter pi_end(N);          //счетчик активных на конец эксперимента
     int N_active;
-    std::ofstream active_log;
-    active_log.open("D:\\IITP\\Results\\active_log_2.txt",  std::ios::out | std::ios::app );
 
     for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) { //пошли эксперименты
 
@@ -216,7 +288,7 @@ RunSimulation(int N, double Traw, double Tper,
 
 
             N_active = CountActiveStas(&STAs);
-            active_log << N_active << ", ";
+            //active_log << N_active << ", ";
             auto per_res = RunRawSlot(&STAs, Traw, current_time, init_freeze);
 
             int N_active_after = CountActiveStas(&STAs);
@@ -227,7 +299,7 @@ RunSimulation(int N, double Traw, double Tper,
 //                st = 'b';
 //            else st = 'c';
 
-            active_log <<  N_active_after << ", ";
+            //active_log <<  N_active_after << ", ";
 
 
             for (int i = 0; i != N; ++i) {
@@ -256,7 +328,7 @@ RunSimulation(int N, double Traw, double Tper,
             sta.reset();
         }
     }
-    active_log.close();
+   // active_log.close();
 
     return std::pair<SimAnswer, std::pair<Counter, Counter>>(answer, std::pair<Counter, Counter>(pi_local, pi_end));
 }
@@ -289,11 +361,12 @@ RunSimulation_Test(int N, double Traw, double Tper,
     Counter pi_end(N);          //счетчик активных на конец эксперимента
     int N_active = 0;
     int N_active_after = 0;
+
     std::ofstream active_log;
-    active_log.open("D:\\IITP\\Results\\active_success.txt",  std::ios::out);
+    active_log.open("D:\\IITP\\Results\\active_test_poisson.txt",  std::ios::out | std::ios::app);
+
 
     for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) { //пошли эксперименты
-
 
       std::vector<double> poisson_times;
       poisson_times.reserve(N);       //перед началом эксперимента как такового
@@ -301,6 +374,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
           double poisson_time = -Traw - log(uni_01_dist(mt_gen_eng)) / lambda;
           poisson_times.push_back(poisson_time);      //генерируем вектор рождения пакета во времени по Пуассону
       }
+
         for (int per_ind = 0; per_ind < pers_num; ++per_ind) {
             N_active = CountActiveStas(&STAs);
             active_log << N - N_active << ",";
@@ -314,20 +388,21 @@ RunSimulation_Test(int N, double Traw, double Tper,
             }
 
             N_active = CountActiveStas(&STAs);
-            auto per_res = RunRawSlot(&STAs, Traw, current_time, init_freeze);
             active_log << N_active << ",";
-            //int drop = DropFrame(&STAs, Traw, current_time);
+            RunRawSlot(&STAs, Traw, current_time, init_freeze);
+            //int drop = DropFrame(&STAs, Traw, current_time);                    //ПРОВЕРКА БИНОМИНАЛЬНОГО РАСПРЕДЕЛЕНИЯ
             //active_log << drop << ",";;
             N_active_after  = CountActiveStas(&STAs);
             active_log << N_active_after << "\n";
-            char st;
-            if (N_active_after - N_active == -1)
-                st = 's';
-            else if (N_active_after - N_active < -1 || N_active_after > N_active)
-                st = 'b';
-            else st = 'c';
-
-            active_log <<  N_active_after << ", " << st << "\n";
+//            char st;
+//            if (N_active_after - N_active == -1)
+//                st = 's';
+//            else if (N_active_after - N_active < -1 || N_active_after > N_active)             ПРОВЕРКА УСПЕХА
+//                st = 'b';
+//            else st = 'c';
+//
+//            active_log <<  N_active_after << ", " << st << "\n";
+//
 
             for (int i = 0; i != N; ++i) {
                 if ((!STAs[i].ifHasPacket()) && (std::isnan(poisson_times[i]))) { //нет пакета, но он был, то
@@ -337,10 +412,14 @@ RunSimulation_Test(int N, double Traw, double Tper,
 
             N_active = CountActiveStas(&STAs); // активные на конец периода
             pi_local.increment(N_active);
+            if (per_ind == pers_num - 1)
+                answer.mean_active += N_active;
         }
 
         N_active = CountActiveStas(&STAs); //активные на конец эксперимента
         pi_end.increment(N_active);
+        answer.stay += N_active;
+
 
         for (auto &sta : STAs) {
             for (auto const &packet : sta.processed_packets) {
@@ -351,12 +430,13 @@ RunSimulation_Test(int N, double Traw, double Tper,
                     ++answer.drop;
                 }
             }
+
+
             answer.counter += sta.counter;
             sta.reset();
         }
     }
     active_log.close();
-
     return std::pair<SimAnswer, std::pair<Counter, Counter>>(answer, std::pair<Counter, Counter>(pi_local, pi_end));
 }
 
