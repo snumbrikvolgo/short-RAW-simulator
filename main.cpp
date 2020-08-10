@@ -82,7 +82,7 @@ int main() {
 //    }
 
 
-    double q = 0.001;
+    double q = 0.01;
 //    std::vector <double> ls = {5.425710e-08,5.425710e-08
 //            , 5.425710e-08
 //            , 7.548410e-08
@@ -107,7 +107,7 @@ int main() {
             K++;
         }
         K = 0; //максимум 20 их
-        q += 0.001;
+        q += 0.01;
     }
 
 
@@ -149,7 +149,7 @@ void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
                  bool print_distr=true) {
 
     std::ofstream active_log;
-    active_log.open("D:\\IITP\\Results\\params_finder_1.txt",  std::ios::out | std::ios::app);
+    active_log.open("D:\\IITP\\Results\\params_finder_2.txt",  std::ios::out | std::ios::app);
     active_log
             << answer.deliv / static_cast<float>(exps_num * N) << ","
             << answer.deliv / static_cast<float>(exps_num * per) << ","
