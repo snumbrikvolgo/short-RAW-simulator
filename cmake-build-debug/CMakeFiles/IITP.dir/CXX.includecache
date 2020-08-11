@@ -31,6 +31,10 @@ map
 -
 ctime
 -
+tuple
+-
+fstream
+-
 frame.h
 D:/IITP/simulator/frame.h
 station.h
