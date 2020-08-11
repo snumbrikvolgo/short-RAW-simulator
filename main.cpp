@@ -82,15 +82,9 @@ int main() {
 //    }
 
 
-    double q = 0.01;
-//    std::vector <double> ls = {5.425710e-08,5.425710e-08
-//            , 5.425710e-08
-//            , 7.548410e-08
-//            , 1.050160e-07
-//            , 1.085680e-07
-//            ,  1.461010e-07
-//            , 1.629340e-07
-//            ,  2.032600e-07};
+
+
+    double q = 0.001;
     int K = 0;
     for (int i = 0; i < 9; i++) {
 
@@ -99,7 +93,26 @@ int main() {
             std::cout << i << " " << j << "\n";
             double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
             double Tper = Traw * 10;
-            double lambda = -log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
+            double lambda = -log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
+
+            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
+
+            K++;
+        }
+        K = 0; //максимум 20 их
+        q += 0.001;
+    }
+    q = 0.01;
+    K = 0;
+    for (int i = 0; i < 9; i++) {
+
+        for (int j = 0; j <= 15; j++)
+        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+            std::cout << i << " " << j << "\n";
+            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+            double Tper = Traw * 10;
+            double lambda = -log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
 
             auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
             PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
@@ -108,6 +121,52 @@ int main() {
         }
         K = 0; //максимум 20 их
         q += 0.01;
+    }
+
+    q = 0.1;
+    K = 0;
+    for (int i = 0; i < 9; i++) {
+
+        for (int j = 0; j <= 15; j++)
+        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+            std::cout << i << " " << j << "\n";
+            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+            double Tper = Traw * 10;
+            double lambda = -log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
+
+            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
+
+            K++;
+        }
+        K = 0; //максимум 20 их
+        q += 0.1;
+    }
+
+        std::vector <double> ls = {5.425710e-08,5.425710e-08
+            , 5.425710e-08
+            , 7.548410e-08
+            , 1.050160e-07
+            , 1.085680e-07
+            ,  1.461010e-07
+            , 1.629340e-07
+            ,  2.032600e-07};
+    for (int i = 0; i < 9; i++) {
+
+        for (int j = 0; j <= 15; j++)
+        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+            std::cout << i << " " << j << "\n";
+            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+            double Tper = Traw * 10;
+            double lambda = ls[i];//= -log(1 - q) / 18440 ;
+
+            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
+
+            K++;
+        }
+        K = 0; //максимум 20 их
+        q += 0.1;
     }
 
 
@@ -149,7 +208,7 @@ void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
                  bool print_distr=true) {
 
     std::ofstream active_log;
-    active_log.open("D:\\IITP\\Results\\params_finder_2.txt",  std::ios::out | std::ios::app);
+    active_log.open("D:\\IITP\\Results\\params_finder_kek.txt",  std::ios::out | std::ios::app);
     active_log
             << answer.deliv / static_cast<float>(exps_num * N) << ","
             << answer.deliv / static_cast<float>(exps_num * per) << ","
@@ -165,6 +224,8 @@ void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
             << answer.square_delay /(static_cast<float>(answer.deliv) - 1) << ","
             << answer.rate  / (static_cast<float>(answer.deliv) - 1)<< ","
             << answer.rate_square /(static_cast<float>(answer.deliv) - 1) << "\n";
+//            << answer.deliv << ","
+//            << answer.rate/1000<< "\n"; //в секундах
 
 
     active_log.close();
@@ -379,8 +440,8 @@ RunSimulation_Test(int N, double Traw, double Tper,
     int N_active = 0;
     int N_active_after = 0;
 
-    //std::ofstream active_log;
-    //active_log.open("D:\\IITP\\Results\\active_test_poisson.txt",  std::ios::out | std::ios::app);
+//    std::ofstream active_log;
+//    active_log.open("D:\\IITP\\Results\\test_null2.txt",  std::ios::out | std::ios::app);
 
 
     for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) { //пошли эксперименты
@@ -444,6 +505,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
                     ++answer.deliv;
                     answer.total_delay += packet.drop_time - packet.birth_time;
                     answer.square_delay += (packet.drop_time - packet.birth_time) * (packet.drop_time - packet.birth_time) ;
+
                 } else {
                     ++answer.drop;
                 }
@@ -453,7 +515,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
             answer.counter += sta.counter;
             sta.reset();
         }
-
+        //active_log << answer.deliv/Tper/pers_num << "\n";
         answer.rate += answer.deliv/Tper/pers_num;
         answer.rate_square += answer.deliv/Tper/pers_num*answer.deliv/Tper/pers_num;
     }
