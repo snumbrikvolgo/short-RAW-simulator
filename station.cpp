@@ -6,13 +6,18 @@ void STA::reset() {
     retry_counter = 0;
     CW = AC.CW_min;
     genBackoff();
+    was_drop = false;
+    last_drop_time = std::numeric_limits<double>::quiet_NaN();
+    get_time = 0;
     queue = std::queue<Packet>(); //максимальная очередь из пакетов равна 1;
     return;
 }
 
 STA::STA(AccessCategory AC, std::mt19937_64 *const gen_ptr)
-        : counter({COUNTERS_LIMIT}), retry_counter(0), last_drop_time(0.0), AC(AC), gen_ptr(gen_ptr) {
+        : counter({COUNTERS_LIMIT}), retry_counter(0), get_time(0.0), AC(AC), gen_ptr(gen_ptr) {
     CW = AC.CW_min;
+    last_drop_time = std::numeric_limits<double>::quiet_NaN();
+    was_drop = false;
     genBackoff();
 }
 
@@ -53,6 +58,7 @@ bool STA::dropPacket(double drop_time, Packet::Status status) {
     }
 
     last_drop_time = drop_time;
+    was_drop = true;
 
     return true;
 }

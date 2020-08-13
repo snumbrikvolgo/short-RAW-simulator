@@ -24,6 +24,7 @@ struct SimAnswer {
               counter(COUNTERS_LIMIT) { }
 
     int64_t deliv;
+    int64_t given = 0;
     double rate_square;
     double rate;
 
@@ -33,6 +34,19 @@ struct SimAnswer {
 
     double total_delay;
     double square_delay;
+    double total_free = 0;
+
+    double free_sum = 0;
+    double free_square = 0;
+    double delays_sum = 0;
+    double delays_sum_square = 0;
+    double rates_sum = 0;
+    double rates_sum_square = 0;
+
+    int64_t valid_exp = 0;
+    int64_t got_exp = 0;
+
+
     Counter counter;
 };
 
@@ -41,8 +55,8 @@ void PrintAnswer(int N, int K, double lambda, int per_num, int exps_num,
                  SimAnswer const & answer,
                  bool print_distr);
 std::tuple<int, int, int> RunRawSlot(std::vector<STA> * const stas_ptr,
-               double Tslot, double slot_start_time,
-               int init_freeze);
+                                     double Tslot, double slot_start_time,
+                                     int init_freeze);
 
 std::pair<SimAnswer, std::pair<Counter, Counter>>
 RunSimulation(int N, double Traw, double Tper,
@@ -51,9 +65,9 @@ RunSimulation(int N, double Traw, double Tper,
               int exps_num, uint64_t seed);
 std::pair<SimAnswer, std::pair<Counter, Counter>>
 RunSimulation_Test(int N, double Traw, double Tper,
-              int pers_num, double lambda,
-              AccessCategory AC,
-              int exps_num, uint64_t seed);
+                   int pers_num, double lambda,
+                   AccessCategory AC,
+                   int exps_num, uint64_t seed);
 
 
 int DropFrame(std::vector<STA> *const stas_ptr, double Tslot, double slot_start_time);
@@ -69,6 +83,7 @@ int main() {
 //    double lambda = 7.5e-07;//= -log(1 - q) / 18440 ;
     int pers_num =  100, exps_num = 1000;
     AccessCategory AC(16, 1024, 7, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+
 
 //    auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
 //
@@ -143,7 +158,7 @@ int main() {
         q += 0.1;
     }
 
-        std::vector <double> ls = {5.425710e-08,5.425710e-08
+    std::vector <double> ls = {5.425710e-08,5.425710e-08
             , 5.425710e-08
             , 7.548410e-08
             , 1.050160e-07
@@ -199,7 +214,7 @@ int main() {
 //    }
 //
 //    active_log.close();
-   return 0;
+    return 0;
 }
 
 
@@ -208,7 +223,7 @@ void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
                  bool print_distr=true) {
 
     std::ofstream active_log;
-    active_log.open("D:\\IITP\\Results\\params_finder_kek.txt",  std::ios::out | std::ios::app);
+    active_log.open("D:\\IITP\\Results\\params_finder_fixed_free1.txt",  std::ios::out | std::ios::app);
     active_log
             << answer.deliv / static_cast<float>(exps_num * N) << ","
             << answer.deliv / static_cast<float>(exps_num * per) << ","
@@ -220,12 +235,29 @@ void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
             << answer.drop / static_cast<float>(exps_num * per) << ","
             << answer.total_delay / static_cast<float>(answer.deliv) << ","
 
-            << answer.total_delay / (static_cast<float>(answer.deliv) - 1) << ","
-            << answer.square_delay /(static_cast<float>(answer.deliv) - 1) << ","
-            << answer.rate  / (static_cast<float>(answer.deliv) - 1)<< ","
-            << answer.rate_square /(static_cast<float>(answer.deliv) - 1) << "\n";
-//            << answer.deliv << ","
-//            << answer.rate/1000<< "\n"; //в секундах
+            << answer.delays_sum / answer.valid_exp << ","
+            << answer.rates_sum / exps_num << ","
+
+            << answer.delays_sum_square / answer.valid_exp - (answer.delays_sum / answer.valid_exp)*(answer.delays_sum / answer.valid_exp) << ","
+            << (answer.delays_sum_square / answer.valid_exp - (answer.delays_sum / answer.valid_exp)* (answer.delays_sum / answer.valid_exp)) * answer.valid_exp / (answer.valid_exp - 1) << ","
+            << answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)* (answer.rates_sum / exps_num) << ","
+            << (answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)*(answer.rates_sum / exps_num)) * exps_num / (exps_num - 1) << ","
+
+            << answer.total_free / static_cast<float>(answer.given) << ","
+            << answer.free_sum / answer.got_exp << ","
+            << answer.free_square / answer.given - (answer.free_sum / answer.given)*(answer.free_sum / answer.given) << ","
+            << (answer.free_square / answer.given - (answer.free_sum / answer.given)*(answer.free_sum / answer.given)) * answer.given/ (answer.given - 1) << "\n";
+
+
+
+
+
+    //answer.delays_sum / exps_num -- выборочное среднее для задержки
+    //answer.rates_sum / exps_num -- выборочное среднее для пропускной способности
+    //answer.delays_sum_square / exps_num - (answer.delays_sum / exps_num)^2 -- выборочная дисперсия для задержки
+    //[answer.delays_sum_square / exps_num - (answer.delays_sum / exps_num)^2] * exps_num / (exps_num - 1) -- несмещённая оценка дисперсии для задержки
+    //answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)^2 -- выборочная дисперсия для пропускной способности
+    //[answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)^2] * exps_num / (exps_num - 1) -- несмещённая оценка дисперсии для пропускной способности
 
 
     active_log.close();
@@ -406,16 +438,16 @@ RunSimulation(int N, double Traw, double Tper,
             sta.reset();
         }
     }
-   // active_log.close();
+    // active_log.close();
 
     return std::pair<SimAnswer, std::pair<Counter, Counter>>(answer, std::pair<Counter, Counter>(pi_local, pi_end));
 }
 
 std::pair<SimAnswer, std::pair<Counter, Counter>>
 RunSimulation_Test(int N, double Traw, double Tper,
-              int pers_num, double lambda,
-              AccessCategory AC,
-              int exps_num, uint64_t seed=0U) {
+                   int pers_num, double lambda,
+                   AccessCategory AC,
+                   int exps_num, uint64_t seed=0U) {
 
     std::mt19937_64 mt_gen_eng;
     if (0U == seed) {
@@ -440,27 +472,41 @@ RunSimulation_Test(int N, double Traw, double Tper,
     int N_active = 0;
     int N_active_after = 0;
 
-//    std::ofstream active_log;
-//    active_log.open("D:\\IITP\\Results\\test_null2.txt",  std::ios::out | std::ios::app);
+    //std::ofstream active_log;
+    //active_log.open("D:\\IITP\\Results\\dump.txt",  std::ios::out | std::ios::app);
 
 
     for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) { //пошли эксперименты
 
-      std::vector<double> poisson_times;
-      poisson_times.reserve(N);       //перед началом эксперимента как такового
-      for (int i = 0; i != N; ++i) {
-          double poisson_time = -Traw - log(uni_01_dist(mt_gen_eng)) / lambda;
-          poisson_times.push_back(poisson_time);      //генерируем вектор рождения пакета во времени по Пуассону
-      }
+        std::vector<double> poisson_times;
+        poisson_times.reserve(N);       //перед началом эксперимента как такового
+        for (int i = 0; i != N; ++i) {
+            double poisson_time = -Traw - log(uni_01_dist(mt_gen_eng)) / lambda;
+            poisson_times.push_back(poisson_time);      //генерируем вектор рождения пакета во времени по Пуассону
+        }
+
+        double total_free =0;
+        int64_t given = 0;
 
         for (int per_ind = 0; per_ind < pers_num; ++per_ind) {
-            N_active = CountActiveStas(&STAs);
+           // N_active = CountActiveStas(&STAs);
             //active_log << N - N_active << ",";
 
             double current_time = per_ind * Tper + Tper - Traw; //на момент начала слота
             for (int i = 0; i != N; ++i) {
                 if ((!STAs[i].ifHasPacket()) && (poisson_times[i] < current_time)) { //если пакета нет и пуассоновское время меньше текущего --> возник пакет в промежутке
                     STAs[i].pushPacket(poisson_times[i]);
+
+                    std::cout  << "drop " << STAs[i].was_drop << " i " << i << "\n";
+                    if (STAs[i].was_drop)
+                    {
+                        double frtime = poisson_times[i] - STAs[i].lastDropTime();
+                        //std::cout  << "frtime " << frtime << "\n";
+                        total_free += frtime;
+                        answer.total_free += frtime;
+                        answer.given ++;
+                        given++;
+                    }
                     poisson_times[i] = std::numeric_limits<double>::quiet_NaN(); //"удаляем" из очереди присвоения времени
                 }
             }
@@ -470,7 +516,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
             RunRawSlot(&STAs, Traw, current_time, init_freeze);
             //int drop = DropFrame(&STAs, Traw, current_time);                    //ПРОВЕРКА БИНОМИНАЛЬНОГО РАСПРЕДЕЛЕНИЯ
             //active_log << drop << ",";;
-            N_active_after  = CountActiveStas(&STAs);
+//            N_active_after  = CountActiveStas(&STAs);
             //active_log << N_active_after << "\n";
 //            char st;
 //            if (N_active_after - N_active == -1)
@@ -492,12 +538,15 @@ RunSimulation_Test(int N, double Traw, double Tper,
             pi_local.increment(N_active);
             if (per_ind == pers_num - 1)
                 answer.mean_active += N_active;
-        }
+        } /////////////////////////конец всех преиодов
 
         N_active = CountActiveStas(&STAs); //активные на конец эксперимента
         pi_end.increment(N_active);
         answer.stay += N_active;
 
+
+        int32_t exp_deliv = 0; // суммарное число кадров переданных за эксперимент
+        double exp_sum_delay = 0.0; // суммарная задержка всех кадров за эксперимент
 
         for (auto &sta : STAs) {
             for (auto const &packet : sta.processed_packets) {
@@ -505,6 +554,9 @@ RunSimulation_Test(int N, double Traw, double Tper,
                     ++answer.deliv;
                     answer.total_delay += packet.drop_time - packet.birth_time;
                     answer.square_delay += (packet.drop_time - packet.birth_time) * (packet.drop_time - packet.birth_time) ;
+
+                    ++exp_deliv;
+                    exp_sum_delay += packet.drop_time - packet.birth_time;
 
                 } else {
                     ++answer.drop;
@@ -515,10 +567,39 @@ RunSimulation_Test(int N, double Traw, double Tper,
             answer.counter += sta.counter;
             sta.reset();
         }
-        //active_log << answer.deliv/Tper/pers_num << "\n";
+
+        if (given != 0)
+        {
+            answer.got_exp++; // 1 норм эсперимент по выдаче
+            double exp_free = total_free/given; //среднее свободное за эксперимент
+            answer.free_sum += exp_free;
+            //std::cout << exp_free << "\n";
+            answer.free_square += exp_free*exp_free;
+        }
+
+        if (exp_deliv != 0)
+        {
+            answer.valid_exp++;
+            double exp_delay = exp_sum_delay / exp_deliv; // средняя задержка за эксперимент
+            answer.delays_sum += exp_delay;
+            answer.delays_sum_square += exp_delay * exp_delay;
+        }
+
+        double exp_rate = exp_deliv / (Tper * pers_num); // пропускная способность за эксперимент
+
+        answer.rates_sum += exp_rate;
+        answer.rates_sum_square += exp_rate * exp_rate;
         answer.rate += answer.deliv/Tper/pers_num;
         answer.rate_square += answer.deliv/Tper/pers_num*answer.deliv/Tper/pers_num;
-    }
+    }//конец 1000 экспериментов
+
+    //answer.delays_sum / exps_num -- выборочное среднее для задержки
+    //answer.rates_sum / exps_num -- выборочное среднее для пропускной способности
+    //answer.delays_sum_square / exps_num - (answer.delays_sum / exps_num)^2 -- выборочная дисперсия для задержки
+    //[answer.delays_sum_square / exps_num - (answer.delays_sum / exps_num)^2] * exps_num / (exps_num - 1) -- несмещённая оценка дисперсии для задержки
+    //answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)^2 -- выборочная дисперсия для пропускной способности
+    //[answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)^2] * exps_num / (exps_num - 1) -- несмещённая оценка дисперсии для пропускной способности
+
     //active_log.close();
     return std::pair<SimAnswer, std::pair<Counter, Counter>>(answer, std::pair<Counter, Counter>(pi_local, pi_end));
 }

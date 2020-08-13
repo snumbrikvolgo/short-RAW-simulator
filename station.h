@@ -59,6 +59,8 @@ public:
 
     std::vector<Packet> processed_packets;
     Counter counter;
+    bool was_drop;
+
 
 private:
 
@@ -73,6 +75,8 @@ private:
     std::queue<Packet> queue;
 
     double last_drop_time;
+    double get_time;
+
 
     AccessCategory AC;
     std::mt19937_64 * const gen_ptr;
