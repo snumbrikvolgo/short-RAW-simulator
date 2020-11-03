@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <ctime>
+#include <climits>
 #include <tuple>
 #include <fstream>
 #include "frame.h"
@@ -52,7 +53,7 @@ struct SimAnswer {
 
 
 void PrintAnswer(int N, int K, double lambda, int per_num, int exps_num,
-                 SimAnswer const & answer,
+                 SimAnswer const & answer, AccessCategory ac,
                  bool print_distr);
 std::tuple<int, int, int> RunRawSlot(std::vector<STA> * const stas_ptr,
                                      double Tslot, double slot_start_time,
@@ -66,7 +67,7 @@ RunSimulation(int N, double Traw, double Tper,
 std::pair<SimAnswer, std::pair<Counter, Counter>>
 RunSimulation_Test(int N, double Traw, double Tper,
                    int pers_num, double lambda,
-                   AccessCategory AC,
+                   AccessCategory AC, int K,
                    int exps_num, uint64_t seed);
 
 
@@ -76,14 +77,21 @@ int DropFrame(std::vector<STA> *const stas_ptr, double Tslot, double slot_start_
 int main() {
 
     int N = 50;
-    int max = 50;
-
-//    double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-//    double Tper = Traw * 10;
-//    double lambda = 7.5e-07;//= -log(1 - q) / 18440 ;
-    int pers_num =  100, exps_num = 1000;
-    AccessCategory AC(16, 1024, 7, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
-
+    int pers_num =  100000, exps_num = 1;
+    std::vector <double> ls = {1.00000000e-08};//, 1.26485522e-08, 1.59985872e-08, 2.02358965e-08,
+//    2.55954792e-08, 3.23745754e-08, 4.09491506e-08, 5.17947468e-08,
+//    6.55128557e-08, 8.28642773e-08, 1.04811313e-07, 1.32571137e-07,
+//    1.67683294e-07, 2.12095089e-07, 2.68269580e-07, 3.39322177e-07,
+//    4.29193426e-07, 5.42867544e-07, 6.86648845e-07, 8.68511374e-07,
+//    1.09854114e-06, 1.38949549e-06, 1.75751062e-06, 2.22299648e-06,
+//    2.81176870e-06, 3.55648031e-06, 4.49843267e-06, 5.68986603e-06,
+//    7.19685673e-06, 9.10298178e-06, 1.15139540e-05, 1.45634848e-05,
+//    1.84206997e-05, 2.32995181e-05, 2.94705170e-05, 3.72759372e-05,
+//    4.71486636e-05, 5.96362332e-05, 7.54312006e-05, 9.54095476e-05,
+//    1.20679264e-04, 1.52641797e-04, 1.93069773e-04, 2.44205309e-04,
+//    3.08884360e-04, 3.90693994e-04, 4.94171336e-04, 6.25055193e-04,
+//    7.90604321e-04, 1.00000000e-03
+//    };
 
 //    auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
 //
@@ -95,135 +103,107 @@ int main() {
 //    for ( size_t n = 0; n + 1 != pi_local_distr.size(); ++n ) {
 //        std::cout << n << "\t" << pi_local_distr[n] << "\t\t" << pi_end_distr[n] << "\n";
 //    }
+    int K = 15;
+    for (int i = 0; i < 1; i++) {
+       for (int j = 0; j <= 0; j++) {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+           std::cout << i << " " << j << "\n";
+           double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+           double Tper = Traw * 10;
+           double lambda = ls[i];
+           AccessCategory AC(16, 1024, 7, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+           auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, K, exps_num, 0U);
+//           PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, AC,false);
 
 
+           auto pi_end_distr = answer.second.second.getDistribution();
+           for ( size_t n = 0; n < pi_end_distr.size(); n++ ) {
+               std::cout << pi_end_distr[n] << ",";
 
-
-    double q = 0.001;
-    int K = 0;
-    for (int i = 0; i < 9; i++) {
-
-        for (int j = 0; j <= 15; j++)
-        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
-            std::cout << i << " " << j << "\n";
-            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-            double Tper = Traw * 10;
-            double lambda = -log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
-
-            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
-            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
-
-            K++;
-        }
-        K = 0; //максимум 20 их
-        q += 0.001;
-    }
-    q = 0.01;
-    K = 0;
-    for (int i = 0; i < 9; i++) {
-
-        for (int j = 0; j <= 15; j++)
-        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
-            std::cout << i << " " << j << "\n";
-            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-            double Tper = Traw * 10;
-            double lambda = -log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
-
-            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
-            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
-
-            K++;
-        }
-        K = 0; //максимум 20 их
-        q += 0.01;
-    }
-
-    q = 0.1;
-    K = 0;
-    for (int i = 0; i < 9; i++) {
-
-        for (int j = 0; j <= 15; j++)
-        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
-            std::cout << i << " " << j << "\n";
-            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-            double Tper = Traw * 10;
-            double lambda = -log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
-
-            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
-            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
-
-            K++;
-        }
-        K = 0; //максимум 20 их
-        q += 0.1;
-    }
-
-    std::vector <double> ls = {5.425710e-08,5.425710e-08
-            , 5.425710e-08
-            , 7.548410e-08
-            , 1.050160e-07
-            , 1.085680e-07
-            ,  1.461010e-07
-            , 1.629340e-07
-            ,  2.032600e-07};
-    for (int i = 0; i < 9; i++) {
-
-        for (int j = 0; j <= 15; j++)
-        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
-            std::cout << i << " " << j << "\n";
-            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
-            double Tper = Traw * 10;
-            double lambda = ls[i];//= -log(1 - q) / 18440 ;
-
-            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
-            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
-
-            K++;
-        }
-        K = 0; //максимум 20 их
-        q += 0.1;
-    }
-
-
-
-//    std::ofstream active_log;
-//    active_log.open("D:\\IITP\\Results\\truth_comparison.txt",  std::ios::out | std::ios::app);
+           }
+            std::cout << answer.first.total_delay / static_cast<float>(answer.first.deliv);
+       }
+       }
+//    for (int i = 0; i < 16; i += 10) {
+//        for (int j = 1; j <= 9; j++) {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+//            std::cout << i << " " << j << "\n";
+//            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+//            double Tper = Traw * 10;
+//            double lambda = ls[i];//-log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
 //
-//    for (int i = 0; i < max; i++)
-//    {
-//        std::cout << "cycle" << i << " " << N << "\n";
-//        auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
-//        //PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
 //
-//        active_log << N << "," << K << "," << lambda << "," << answer.first.mean_active/exps_num << ",";      ПРОВЕРКА СТАЦИОНАРНОГО РАСПРЕДЕЛЕНИЯ
-//        auto pi_end_distr = answer.second.second.getDistribution();
-//        for ( size_t n = 0; n < pi_end_distr.size(); n++ ) {
-//            active_log << pi_end_distr[n] << ",";
-//
+//            AccessCategory AC(16, 1024, j, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+//            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, K, exps_num, 0U);
+//            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, AC,false);
 //        }
+//        for (int j = 10; j <= 99; j+=10) {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+//            std::cout << i << " " << j << "\n";
+//            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+//            double Tper = Traw * 10;
+//            double lambda = ls[i];//-log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
 //
-//        for ( size_t n = pi_end_distr.size(); n <= max; n++ )
-//        {
-//            active_log << 0 << ",";
 //
+//            AccessCategory AC(16, 1024, j, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+//            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, K, exps_num, 0U);
+//            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, AC,false);
 //        }
+//        for (int j = 100; j <= 999; j+=100) {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+//            std::cout << i << " " << j << "\n";
+//            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+//            double Tper = Traw * 10;
+//            double lambda = ls[i];//-log(1 - q) / 18440;//5.532600e-07;//-log(1 - q) / 18440;//ls[i];//= -log(1 - q) / 18440 ;
 //
-//        active_log << 0 << "\n";
 //
-//        N++;
+//            AccessCategory AC(16, 1024, j, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+//            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, K, exps_num, 0U);
+//            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, AC,false);
+//        }
+//        double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+//        double Tper = Traw * 10;
+//        AccessCategory AC(16, 1024, INT_MAX, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+//        auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, ls[i], AC, K, exps_num, 0U);
+//        PrintAnswer(N, K, ls[i], pers_num, exps_num, answer.first, AC,false);
 //    }
+
+//    for (int i = 0; i < 9; i++) {
 //
-//    active_log.close();
+//        for (int j = 0; j <= 15; j++)
+//        {                                                                                             //ТЕСТЫ ДЛЯ РАЗНЫХ ЛЯМБДА И К
+//            std::cout << i << " " << j << "\n";
+//            double Traw = Ts + (K) * Te; //Т.к. в аналит. модели K пустых слотов до успеха
+//            double Tper = Traw * 10;
+//            double lambda = ls[i];//= -log(1 - q) / 18440 ;
+//            AccessCategory AC(16, 1024, 7, 0); //1 - min, 2 - max, 3 - max RL, AI.. = 0
+//            auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+//            PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, AC,false);
+//            K++;
+//
+//        }
+//        K = 0;
+//        q += 0.1;
+//    }
+////    std::ofstream active_log;
+////    active_log.open("D:\\IITP\\Results\\truth_comparison.txt",  std::ios::out | std::ios::app);
+////
+////    for (int i = 0; i < max; i++)
+////    {
+////        std::cout << "cycle" << i << " " << N << "\n";
+////        auto answer = RunSimulation_Test(N, Traw, Tper, pers_num, lambda, AC, exps_num, 0U);
+////        //PrintAnswer(N, K, lambda, pers_num, exps_num, answer.first, false);
+////
+////        active_log << N << "," << K << "," << lambda << "," << answer.first.mean_active/exps_num << ",";      ПРОВЕРКА СТАЦИОНАРНОГО РАСПРЕДЕЛЕНИЯ
+
+////
+////    active_log.close();
     return 0;
 }
 
 
 void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
-                 SimAnswer const & answer,
+                 SimAnswer const & answer,AccessCategory ac,
                  bool print_distr=true) {
 
     std::ofstream active_log;
-    active_log.open("D:\\IITP\\Results\\params_finder_fixed_free1.txt",  std::ios::out | std::ios::app);
+    active_log.open("D:\\IITP\\Results\\W_diff.txt",  std::ios::out | std::ios::app);
     active_log
             << answer.deliv / static_cast<float>(exps_num * N) << ","
             << answer.deliv / static_cast<float>(exps_num * per) << ","
@@ -246,11 +226,9 @@ void PrintAnswer(int N, int K, double lambda, int per, int exps_num,
             << answer.total_free / static_cast<float>(answer.given) << ","
             << answer.free_sum / answer.got_exp << ","
             << answer.free_square / answer.given - (answer.free_sum / answer.given)*(answer.free_sum / answer.given) << ","
-            << (answer.free_square / answer.given - (answer.free_sum / answer.given)*(answer.free_sum / answer.given)) * answer.given/ (answer.given - 1) << "\n";
-
-
-
-
+            << (answer.free_square / answer.given - (answer.free_sum / answer.given)*(answer.free_sum / answer.given)) * answer.given/ (answer.given - 1) << ","
+            << ac.CW_min << ","
+            << ac.RL << "\n";
 
     //answer.delays_sum / exps_num -- выборочное среднее для задержки
     //answer.rates_sum / exps_num -- выборочное среднее для пропускной способности
@@ -446,7 +424,7 @@ RunSimulation(int N, double Traw, double Tper,
 std::pair<SimAnswer, std::pair<Counter, Counter>>
 RunSimulation_Test(int N, double Traw, double Tper,
                    int pers_num, double lambda,
-                   AccessCategory AC,
+                   AccessCategory AC, int K,
                    int exps_num, uint64_t seed=0U) {
 
     std::mt19937_64 mt_gen_eng;
@@ -472,8 +450,8 @@ RunSimulation_Test(int N, double Traw, double Tper,
     int N_active = 0;
     int N_active_after = 0;
 
-    //std::ofstream active_log;
-    //active_log.open("D:\\IITP\\Results\\dump.txt",  std::ios::out | std::ios::app);
+    std::ofstream active_log;
+    active_log.open("D:\\IITP\\Results\\time_dump.txt",  std::ios::out | std::ios::app);
 
 
     for (int exp_ind = 0; exp_ind < exps_num; ++exp_ind) { //пошли эксперименты
@@ -489,7 +467,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
         int64_t given = 0;
 
         for (int per_ind = 0; per_ind < pers_num; ++per_ind) {
-           // N_active = CountActiveStas(&STAs);
+           //N_active = CountActiveStas(&STAs);
             //active_log << N - N_active << ",";
 
             double current_time = per_ind * Tper + Tper - Traw; //на момент начала слота
@@ -497,7 +475,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
                 if ((!STAs[i].ifHasPacket()) && (poisson_times[i] < current_time)) { //если пакета нет и пуассоновское время меньше текущего --> возник пакет в промежутке
                     STAs[i].pushPacket(poisson_times[i]);
 
-                    std::cout  << "drop " << STAs[i].was_drop << " i " << i << "\n";
+                    //std::cout  << "drop " << STAs[i].was_drop << " i " << i << "\n";
                     if (STAs[i].was_drop)
                     {
                         double frtime = poisson_times[i] - STAs[i].lastDropTime();
@@ -511,22 +489,26 @@ RunSimulation_Test(int N, double Traw, double Tper,
                 }
             }
 
-            N_active = CountActiveStas(&STAs);
-            //active_log << N_active << ",";
+            int N_active = CountActiveStas(&STAs);
+
             RunRawSlot(&STAs, Traw, current_time, init_freeze);
             //int drop = DropFrame(&STAs, Traw, current_time);                    //ПРОВЕРКА БИНОМИНАЛЬНОГО РАСПРЕДЕЛЕНИЯ
             //active_log << drop << ",";;
-//            N_active_after  = CountActiveStas(&STAs);
-            //active_log << N_active_after << "\n";
-//            char st;
-//            if (N_active_after - N_active == -1)
-//                st = 's';
+            int N_active_after  = CountActiveStas(&STAs);
+
+            if (N_active_after - N_active == -1)
+            {
+                char st;
+                st = 's';
+                if (st == 's')
+                {
+                    std::cout << st ;
+                }
+            }
+
 //            else if (N_active_after - N_active < -1 || N_active_after > N_active)             ПРОВЕРКА УСПЕХА
 //                st = 'b';
 //            else st = 'c';
-//
-//            active_log <<  N_active_after << ", " << st << "\n";
-//
 
             for (int i = 0; i != N; ++i) {
                 if ((!STAs[i].ifHasPacket()) && (std::isnan(poisson_times[i]))) { //нет пакета, но он был, то
@@ -561,6 +543,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
                 } else {
                     ++answer.drop;
                 }
+                active_log << packet.drop_time << "," << packet.birth_time << "\n";
             }
 
 
@@ -600,7 +583,7 @@ RunSimulation_Test(int N, double Traw, double Tper,
     //answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)^2 -- выборочная дисперсия для пропускной способности
     //[answer.rates_sum_square / exps_num - (answer.rates_sum / exps_num)^2] * exps_num / (exps_num - 1) -- несмещённая оценка дисперсии для пропускной способности
 
-    //active_log.close();
+    active_log.close();
     return std::pair<SimAnswer, std::pair<Counter, Counter>>(answer, std::pair<Counter, Counter>(pi_local, pi_end));
 }
 

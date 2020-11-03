@@ -27,6 +27,7 @@ void STA::determTxAttempt(bool success, double current_time) {
     } else {
         ++retry_counter;
         if ( AC.RL == retry_counter ) {
+            //assert(false); ///for infinite number of retries
             dropPacket(current_time, Packet::Status::DROPPED_RETRY);
         }
     }
@@ -46,7 +47,6 @@ bool STA::dropPacket(double drop_time, Packet::Status status) {
     if ( queue.empty() ) {
         return false;
     }
-
     Packet packet = queue.front();
     packet.drop_time = drop_time;
     packet.status = status;
