@@ -9,6 +9,7 @@ void STA::reset() {
     was_drop = false;
     last_drop_time = std::numeric_limits<double>::quiet_NaN();
     get_time = 0;
+    energy_consumption = 0;
     queue = std::queue<Packet>(); //максимальная очередь из пакетов равна 1;
     return;
 }
@@ -18,6 +19,7 @@ STA::STA(AccessCategory AC, std::mt19937_64 *const gen_ptr)
     CW = AC.CW_min;
     last_drop_time = std::numeric_limits<double>::quiet_NaN();
     was_drop = false;
+    energy_consumption = 0;
     genBackoff();
 }
 

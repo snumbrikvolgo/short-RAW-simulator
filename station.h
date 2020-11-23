@@ -61,6 +61,13 @@ public:
     Counter counter;
     bool was_drop;
 
+    void listenChannel(double W){
+        energy_consumption += W;
+    }
+    double getEnergy() const {
+        return  energy_consumption;
+    }
+
 
 private:
 
@@ -76,6 +83,7 @@ private:
 
     double last_drop_time;
     double get_time;
+    double energy_consumption;
 
 
     AccessCategory AC;
